@@ -71,11 +71,15 @@ int main(void) {
 		}
 
 		if (imgui_panel::step_simulation) {
+			static const float arr[] = {imgui_panel::ks, imgui_panel::ka, imgui_panel::kc, imgui_panel::rs, imgui_panel::ra, imgui_panel::rc, imgui_panel::ds, imgui_panel::da, imgui_panel::dc};
+			model->set_constants(arr);
 			model->step(imgui_panel::dt_simulation);
 		}
 
 		if (imgui_panel::play_simulation) {
 			for (size_t i = 0; i < imgui_panel::number_of_iterations_per_frame; i++) {
+				static const float arr[] = {imgui_panel::ks, imgui_panel::ka, imgui_panel::kc, imgui_panel::rs, imgui_panel::ra, imgui_panel::rc, imgui_panel::ds, imgui_panel::da, imgui_panel::dc};
+				model->set_constants(arr);
 				model->step(imgui_panel::dt_simulation);
 			}
 		}

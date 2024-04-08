@@ -1,6 +1,8 @@
 #include "models.hpp"
 #include <random>
 
+#include <glm/glm.hpp>
+
 namespace simulation {
 	namespace primatives {
 		//No functions for structs, yet...
@@ -9,14 +11,50 @@ namespace simulation {
 	namespace models {
 		//Unless changed in main, this will call only once before the window is created
 		BoidsModel::BoidsModel()
-			: boid_geometry(givr::geometry::Mesh(givr::geometry::Filename("./models/dart.obj")))
+			: boid_geometry(givr::geometry::Mesh(givr::geometry::Filename("../models/dart.obj")))
 			, boid_style(givr::style::Colour(1.f, 1.f, 0.f), givr::style::LightPosition(100.f, 100.f, 100.f))
+			, wall_geometry()
+			, wall_style(givr::style::Colour(2.f, 1.f, 1.f), givr::style::LightPosition(100.f, 100.f, 100.f))
 		{
 			// Reset Dynamic elements
 			reset();
 
+			planes.resize(6);
+			// //Top
+			planes[0].point = {0,10,0};
+			planes[0].normal = {0,-1,0};
+			planes[0].id = "top";
+			//Bottom
+			planes[1].point = {0,-10,0};
+			planes[1].normal = {0,1,0};
+			planes[1].id = "bottom";
+			//Left
+			planes[2].point = {-10,0,0};
+			planes[2].normal = {1,0,0};
+			planes[2].id = "left";
+			//Right
+			planes[3].point = {10,0,0};
+			planes[3].normal = {-1,0,0};
+			planes[3].id = "right";
+			//Back
+			planes[4].point = {0,0,-10};
+			planes[4].normal = {0,0,1};
+			planes[4].id = "back";
+			//Front
+			planes[5].point = {0,0,10};
+			planes[5].normal = {0,0,-1};
+			planes[5].id = "front";
+
+
+			wall_geometry.push_back(givr::geometry::Point1(-10.f, -10.f, 10.f), givr::geometry::Point2(-10.f, -10.f, -10.f), givr::geometry::Point3(10.f, -10.f, 10.f));
+			wall_geometry.push_back(givr::geometry::Point1(10.f, -10.f, -10.f), givr::geometry::Point2(-10.f, -10.f, -10.f), givr::geometry::Point3(10.f, -10.f, 10.f));
+			wall_geometry.push_back(givr::geometry::Point1(-10.f, -10.f, -10.f), givr::geometry::Point2(-10.f, 10.f, -10.f), givr::geometry::Point3(10.f, -10.f, -10.f));
+			wall_geometry.push_back(givr::geometry::Point1(10.f, 10.f, -10.f), givr::geometry::Point2(-10.f, 10.f, -10.f), givr::geometry::Point3(10.f, -10.f, -10.f));
+			wall_geometry.push_back(givr::geometry::Point1(-10.f, -10.f, -10.f), givr::geometry::Point2(-10.f, 10.f, -10.f), givr::geometry::Point3(-10.f, -10.f, 10.f));
+			wall_geometry.push_back(givr::geometry::Point1(-10.f, 10.f, 10.f), givr::geometry::Point2(-10.f, 10.f, -10.f), givr::geometry::Point3(-10.f, -10.f, 10.f));
 			// Render
 			boid_render = givr::createInstancedRenderable(boid_geometry, boid_style);
+			wall_render = givr::createRenderable(wall_geometry, wall_style);
 		}
 
 		void BoidsModel::reset() {
@@ -29,11 +67,16 @@ namespace simulation {
 			static std::uniform_real_distribution<double> speed_distribution(5., 25.);
 
 			boids.resize(n_boids);
+			int i = 0;
 			for (primatives::boid& boid : boids) {
 				//Random Position in 20 x 20 x 20 cube
 				boid.p.x = position_distribution(generator);
 				boid.p.y = position_distribution(generator);
 				boid.p.z = position_distribution(generator);
+				boid.id = i;
+				i++;
+				boid.v = {0,0,0};
+				boid.f = {0,0,0};
 
 				//Random heading (two angles) and Random speed
 				double theta = glm::radians(theta_distribution(generator));
@@ -49,18 +92,62 @@ namespace simulation {
 
 		}
 
+		void BoidsModel::set_constants(const float arr[]){
+			ks = arr[0];
+			ka = arr[1];
+			kc = arr[2];
+			rs = arr[3];
+			ra = arr[4];
+			rc = arr[5];
+			ds = arr[6];
+			da = arr[7];
+			dc = arr[8];
+		}
+
 		void BoidsModel::step(float dt) {
-			reset(); // Comment this out
-			//TODO: apply forces and compute integration step
+			// for (primatives::boid& boid_i : boids){
+			// 	for (primatives::boid& boid_j : boids){
+			// 		if (boid_i.id!=boid_j.id){
+			// 			glm::vec3 p_ij = boid_i.p - boid_j.p;
+			// 			float d = glm::length(p_ij);
+			// 			float alpha = glm::dot(glm::normalize(p_ij), glm::normalize(boid_i.v));
+			// 			if ((d<rs) && (alpha>cos(glm::radians(ds)))){
+			// 				boid_i.separation_force(ks, boid_j, p_ij, d);
+			// 			} else if ((d<ra) && (alpha>cos(glm::radians(da)))){
+			// 				boid_i.alignment_force(ka, boid_j);
+			// 			} else if ((d<rc) && (alpha>cos(glm::radians(dc)))){
+			// 				boid_i.cohesion_force(kc, boid_j);
+			// 			}
+			// 		}
+			// 	}
+			// }
+			for (primatives::boid& boid_i : boids){
+				boid_i.calc_avoidance(planes);
+				boid_i.integrate(dt);
+				// std::cout << "p: [ " << boid_i.p.x << ", " << boid_i.p.y << ", "<< boid_i.p.z << ",]" << std::endl;
+			}
 		}
 
 		void BoidsModel::render(const ModelViewContext& view) {
 			//Add Mass render
-			for (const primatives::boid& boid : boids)
-				givr::addInstance(boid_render, glm::translate(glm::mat4(1.f), boid.p)); //NEED TO FRAME!!!
+			for (primatives::boid& boid : boids) {
+				boid.f += g;
+				glm::vec3 T = glm::normalize(boid.v);
+				glm::vec3 N = glm::normalize(boid.f - (glm::dot(boid.f, T)*T));
+				glm::vec3 B = glm::normalize(glm::cross(N,T));
+				glm::mat4 M;
+				M[0] = glm::vec4(B, 0.f);
+				M[1] = glm::vec4(N, 0.f);
+				M[2] = glm::vec4(T, 0.f);
+				M[3] = glm::vec4(boid.p, 1.f);
 
+				givr::addInstance(boid_render, M);
+				boid.f = glm::vec3(0.f);
+			}
+			
 			//Render
 			givr::style::draw(boid_render, view);
+			givr::style::draw(wall_render, view);
 		}
 	} // namespace models
 } // namespace simulation

@@ -11,18 +11,67 @@
 
 namespace simulation {
 	namespace primatives {
-		//Boids in simulation
-		struct boid {
-			glm::vec3 p = glm::vec3(0.f);
-			glm::vec3 v = glm::vec3(0.f);
-			//Note: Mass is implicitly 1 (our choice) so Force = Acceleration
-			//TO-DO: Modify this class to include certain desired quantities (mass, force, ...)
-			//May even add functions! Such as integration ...
-		};
-
 		//Walls for avoidences and simulation boundry
 		struct plane {
-			//TO-DO: Define a splne for collision avoidence and container purposes
+			glm::vec3 point;
+			glm::vec3 normal;
+			glm::vec3 repulsion_point;
+			std::string id;
+			float epsilon = 1;
+		};
+		//Boids in simulation
+		struct boid {
+			int id;
+			glm::vec3 p = glm::vec3(0.f);
+			glm::vec3 v = glm::vec3(0.f);
+			glm::vec3 f = glm::vec3(0.f);
+			bool in_collision = false;
+			void integrate(float dt){
+				v = v + f*dt;
+				p = p + v*dt;	
+			}
+			void separation_force(float k, primatives::boid b2, glm::vec3 p_ij, float d){
+				f += -(k/d)*glm::normalize(p_ij);
+			}
+			void alignment_force(float k, primatives::boid b2){
+				f += k*(b2.v-v);
+			}
+			void cohesion_force(float k, primatives::boid b2){
+				f += k*(b2.p-p);
+			}
+			void avoidance_force(primatives::plane plane, glm::vec3 u){
+				float e = plane.epsilon;
+
+				glm::vec3 v_norm = glm::normalize(v);
+				glm::vec3 fa_norm = glm::normalize(plane.normal-glm::dot(plane.normal, v_norm)*v_norm);
+				if (glm::dot(fa_norm, plane.normal)!=1){
+					float r = (glm::dot(u, plane.normal)-e)/(1-glm::dot(fa_norm, plane.normal));
+					glm::vec3 fa = ((glm::dot(v,v))/r)*fa_norm;
+					f+=fa;
+				}
+			}
+			void penalty_force(primatives::plane plane){
+				float k = 50;
+				float d = glm::dot(plane.normal, p-plane.point);
+				glm::vec3 f_coll = -k*d*plane.normal;
+				f += f_coll;
+			}
+			void calc_avoidance(std::vector<primatives::plane> planes){
+				for (primatives::plane& plane : planes) {
+					glm::vec3 u = p - plane.point;
+					float d = abs(glm::dot(plane.normal,u))/glm::length(plane.normal);
+					//If boid is moving towards plane
+					if (glm::dot(plane.normal, glm::normalize(v))<0){
+						if (d<1) {
+							// penalty_force(plane);
+						} else if (d<2 && d>1){
+							std::cout<<"adjust on "<<plane.id<<std::endl;
+							avoidance_force(plane, u);
+						}
+					}
+				}
+			}
+			//Note: Mass is implicitly 1 (our choice) so Force = Acceleration
 		};
 
 		//Spheres for avoidences
@@ -47,17 +96,22 @@ namespace simulation {
 		public:
 			BoidsModel();
 			void reset();
+			
+			void set_constants(const float arr[]);
 			void step(float dt);
 			void render(const ModelViewContext& view);
 
 			//Simulation Constants (you can re-assign values here from imgui)
 			glm::vec3 g = { 0.f, -9.81f, 0.f };
-			size_t n_boids = 100; //need alot more eventually for full assignment
+			size_t n_boids = 1; //need alot more eventually for full assignment
+			float rs, ra, rc;
+			float ds, da, dc;
+			float ks, ka, kc;
 
 		private:
 			//Simulation Parts
 			std::vector<primatives::boid> boids;
-			//std::vector<primatives::plane> planes;
+			std::vector<primatives::plane> planes;
 			//std::vector<primatives::sphere> spheres;
 
 			//Render
@@ -65,10 +119,9 @@ namespace simulation {
 			givr::style::Phong boid_style;
 			givr::InstancedRenderContext<givr::geometry::Mesh, givr::style::Phong> boid_render;
 
-			//givr::geometry::TriangleSoup wall_geometry;
-			//givr::style::Phong wall_style;
-			// Maybe changed this (below) to instanced render????????
-			//givr::RenderContext<givr::geometry::TriangleSoup, givr::style::Phong> wall_render;
+			givr::geometry::TriangleSoup wall_geometry;
+			givr::style::Phong wall_style;
+			givr::RenderContext<givr::geometry::TriangleSoup, givr::style::Phong> wall_render;
 
 			//givr::geometry::Sphere sphere_geometry;
 			//givr::style::Phong sphere_style;
