@@ -8,6 +8,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/compatibility.hpp> // lerp
+using namespace std;
 
 namespace simulation {
 	namespace primatives {
@@ -21,9 +22,13 @@ namespace simulation {
 		//Boids in simulation
 		struct boid {
 			int id;
+			int ix;
+			int iy;
+			int iz;
 			glm::vec3 p = glm::vec3(0.f);
 			glm::vec3 v = glm::vec3(0.f);
 			glm::vec3 f = glm::vec3(0.f);
+			vector<vector<primatives::boid>> neighbourhood;
 			void integrate(float dt){
 				v = v + f*dt;
 				float max_speed = 25;
@@ -112,14 +117,21 @@ namespace simulation {
 			void set_constants(const float arr[]);
 			void step(float dt);
 			void render(const ModelViewContext& view);
+			void get_grid();
+			vector<vector<primatives::boid>>  get_neighbourhood(unordered_map<int, unordered_map<int, unordered_map<int, vector<primatives::boid>>>> grid, primatives::boid boid);
+			unordered_map<int, unordered_map<int, unordered_map<int, vector<primatives::boid>>>> grid;  
 
 			//Simulation Constants (you can re-assign values here from imgui)
 			glm::vec3 g = { 0.f, -9.81f, 0.f };
-			size_t n_boids = 100; //need alot more eventually for full assignment
-			float rs, ra, rc;
+			size_t n_boids = 10; //need alot more eventually for full assignment
+			float rs, ra;
+			int rc;
+			int last_rc = 0;
 			float ds, da, dc;
 			float ks, ka, kc;
+			float t_g;
 			int cube_width = 20;
+			int gridmax;
 
 		private:
 			//Simulation Parts
