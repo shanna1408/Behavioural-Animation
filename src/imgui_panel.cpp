@@ -18,7 +18,7 @@ namespace imgui_panel {
 	float kc = 0.2f;
 	float rs = 6.f;
 	float ra = 8.f;
-	float rc = 10.f;
+	float rc = 5.f;
 	float ds = 175.f;
 	float da = 140.f;
 	float dc = 120.f;
@@ -61,7 +61,7 @@ namespace imgui_panel {
 
 			ImGui::DragFloat("rs (Separation)", &rs, 0.01f, 0.f, 10.f, "%.2f");
 			ImGui::DragFloat("ra (Alignment)", &ra, 0.01f, 0.f, 10.f, "%.2f");
-			ImGui::DragFloat("rc (Cohesion)", &rc, 0.01f, 0.f, 10.f, "%.2f");
+			ImGui::DragFloat("rc (Cohesion)", &rc, 1.f, 0.f, 10.f, "%1.f");
 
 			ImGui::Spacing();
 			ImGui::Separator();

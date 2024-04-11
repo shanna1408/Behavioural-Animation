@@ -13,6 +13,7 @@ Compilation
 ## How to Build
 
     cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=Release
+    cd "\Users\princ\OneDrive\Desktop\School\CPSC 687\Assignment 5 - Base Code\Behavioural Animation"
     cmake --build build
 
 ## How to Run
