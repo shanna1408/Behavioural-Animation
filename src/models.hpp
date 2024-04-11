@@ -79,6 +79,7 @@ namespace simulation {
 					} if (d<0){
 						// If boid exits the cube, apply a penalty force
 						// std::cout<< "id: " << id << " penalty "<<std::endl;
+						//fml
 						penalty_force(plane);
 					}
 				}
