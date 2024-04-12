@@ -11,7 +11,7 @@ namespace simulation {
 	namespace models {
 		//Unless changed in main, this will call only once before the window is created
 		BoidsModel::BoidsModel()
-			: boid_geometry(givr::geometry::Mesh(givr::geometry::Filename("../models/dart.obj")))
+			: boid_geometry(givr::geometry::Mesh(givr::geometry::Filename("models/dart.obj")))
 			, boid_style(givr::style::Colour(1.f, 1.f, 0.f), givr::style::LightPosition(100.f, 100.f, 100.f))
 			, wall_geometry()
 			, wall_style(givr::style::Colour(2.f, 1.f, 1.f), givr::style::LightPosition(100.f, 100.f, 100.f))
@@ -87,9 +87,8 @@ namespace simulation {
 				boid.v.x = speed * std::cos(theta) * std::cos(phi);
 				boid.v.y = speed * std::sin(phi);
 				boid.v.z = speed * std::sin(theta) * std::cos(phi);
-
 			}
-
+			grid.boids = &boids;
 		}
 
 		void BoidsModel::set_constants(const float arr[]){
