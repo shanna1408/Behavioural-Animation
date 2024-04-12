@@ -104,9 +104,17 @@ namespace simulation {
 		}
 
 		void BoidsModel::step(float dt) {
+			if (!(grid.scale == rc)) {
+				grid.grid_constants(rc, cube_width);
+			}
+			for (int i = 0; i < grid.buckets.size(); i++) {
+				if (grid.buckets[i].size()>0)
+					grid.buckets[i].clear();
+			}
+			grid.move_boids();
 			for (primatives::boid& boid_i : boids){
 				boid_i.f = {0,0,0};
-				for (primatives::boid& boid_j : boids){
+				/*for (primatives::boid& boid_j : boids){
 					if (boid_i.id!=boid_j.id){
 						glm::vec3 p_ij = boid_i.p - boid_j.p;
 						float d = glm::length(p_ij);
@@ -119,7 +127,7 @@ namespace simulation {
 							boid_i.cohesion_force(kc, boid_j);
 						}
 					}
-				}
+				}*/
 			}
 			for (primatives::boid& boid_i : boids){
 				boid_i.calc_avoidance(planes);
@@ -131,6 +139,7 @@ namespace simulation {
 					}
 				}
 			}
+			/*cout << "\n" << endl;*/
 		}
 
 		void BoidsModel::render(const ModelViewContext& view) {

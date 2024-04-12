@@ -20,19 +20,6 @@ namespace simulation {
 			std::string id;
 			float epsilon = 1;
 		};
-		struct grid {
-			float scale;
-			float cube_width;
-			std::vector<primatives::boid>* boids;
-			std::vector<std::vector<size_t>> buckets;
-			std::vector<size_t>& get_buckets(float x, float y, float z){
-				int i = floor((x + cube_width)/scale);
-				int j = floor((y + cube_width) / scale);
-				int k = floor((z + cube_width) / scale);
-				int n = cube_width * 2;
-				return buckets[i+(n*j)+(n*n*k)];
-			}
-		};
 		//Boids in simulation
 		struct boid {
 			int id;
@@ -53,12 +40,6 @@ namespace simulation {
 					d = std::min(d, -0.00001f);
 				}
 				glm::vec3 f_sep = (k / d) * glm::normalize(p_ij);
-				/*for (float p_i : {f_sep.x, f_sep.y, f_sep.z}) {
-					if (p_i > 10000 || p_i < -10000) {
-						std::cout << "id: " << id << " f_sep: [ " << f_sep.x << ", " << f_sep.y << ", " << f_sep.z << ",]" << std::endl;
-						break;
-					}
-				}*/
 				f += f_sep;
 			}
 			void alignment_force(float k, primatives::boid b2){
@@ -83,40 +64,18 @@ namespace simulation {
 					multiplier = std::min(cap, multiplier);
 				}
 				glm::vec3 fa = multiplier*fa_norm;
-				/*for (float p_i : {fa.x, fa.y, fa.z}) {
-					if (p_i > 10000 || p_i < -10000) {
-						std::cout << "id: " << id << " multiplier: " << multiplier << "fa_norm: [" << fa_norm.x << ", " << fa_norm.y << ", " << fa_norm.z << ", ] " << std::endl;
-						std::cout << "id: " << id << " fa: [ " << fa.x << ", " << fa.y << ", " << fa.z << ",]" << std::endl;
-						break;
-					}
-				}*/
 				f+=fa;
 			}
 			void repulsion_force(primatives::plane plane, float d){
 				float k = 5;
 				float multiplier = std::min(5000.f, k/(d*d));
-				//if (multiplier == INFINITY) multiplier = 10000.f;
 				glm::vec3 f_r = plane.normal*(k/(d*d));
-				/*for (float p_i : {f_r.x, f_r.y, f_r.z}) {
-					if (p_i > 10000 || p_i < -10000) {
-						std::cout << "d: " << d << " d*d: " << d * d << " k: " << k << " k/d*d: " << k / d * d << std::endl;
-						std::cout << "id: " << id << " f_r: [ " << f_r.x << ", " << f_r.y << ", " << f_r.z << ",]" << std::endl;
-						break;
-					}
-				}*/
 				f+=f_r;
 			}
 			void penalty_force(primatives::plane plane){
 					float k = 10;
 					float d = glm::dot(plane.normal, p-plane.point);	
 					glm::vec3 f_coll = -k*d*plane.normal;
-					/*for (float p_i : {f_coll.x, f_coll.y, f_coll.z}) {
-						if (p_i > 10000 || p_i < -10000) {
-							std::cout << "id: " << id << " f_coll: [ " << f_coll.x << ", " << f_coll.y << ", " << f_coll.z << ",]" << std::endl;
-							std::cout << "d: " << d << " k: " << k << " -k*d: " << -k*d << std::endl;
-							break;
-						}
-					}*/
 					f += f_coll;
 			}
 			void calc_avoidance(std::vector<primatives::plane> planes){
@@ -141,9 +100,51 @@ namespace simulation {
 					}
 				}
 			}
+			const void print() {
+				cout << "id: " << id << endl;
+			}
 			//Note: Mass is implicitly 1 (our choice) so Force = Acceleration
 		};
-
+		struct grid {
+			float scale = 0;
+			float cube_width;
+			std::vector<primatives::boid>* boids;
+			std::vector<std::vector<primatives::boid*>> buckets;
+			int get_bucket(float x, float y, float z, int id) {
+				int i = floor((x + cube_width) / scale);
+				int j = floor((y + cube_width) / scale);
+				int k = floor((z + cube_width) / scale);
+				/*cout << "cw: " << cube_width << " scale: " << scale << endl;*/
+				/*std::cout << "id: " << id << " p: [ " << x << ", " << y << ", " << z << ",]" << std::endl;*/
+				/*std::cout << "id: " << id << " b: [ " << i << ", " << j << ", " << k << ",]" << std::endl;*/
+				int n = cube_width * 2;
+				return (i + (n * j) + (n * n * k));
+			}
+			void move_boids() {
+				for (primatives::boid& boid : *boids) {
+					/*cout << "checking boid #" << boid.id << endl;*/
+					int index = get_bucket(boid.p.x, boid.p.y, boid.p.z, boid.id);
+					vector<primatives::boid*> bucket = buckets[index];
+					bucket.push_back(&boid);
+					/*cout << "bucket index: " << index << " bucket length: " << bucket.size() << endl;
+					cout << "bucket contains: " << endl;*/
+					/*for (vector<primatives::boid*>::const_iterator iter = bucket.begin(),
+						end = bucket.end();
+						iter != end;
+						++iter)
+					{
+						(*iter)->print();
+					}*/
+					buckets[index] = bucket;
+				}
+			}
+			void grid_constants(int rc, int cw) {
+				scale = rc;
+				cube_width = cw;
+				float s = (cube_width * cube_width) / scale;
+				buckets.resize(s * s * s);
+			}
+		};
 		//Spheres for avoidences
 		struct sphere {
 			//TO-DO: Define a sphere for collision avoidence purposes
@@ -173,7 +174,7 @@ namespace simulation {
 
 			//Simulation Constants (you can re-assign values here from imgui)
 			glm::vec3 g = { 0.f, -9.81f, 0.f };
-			size_t n_boids = 10;
+			size_t n_boids = 1000;
 			float rs, ra, rc;
 			float ds, da, dc;
 			float ks, ka, kc;
